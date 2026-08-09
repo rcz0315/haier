@@ -27,6 +27,13 @@ class HaierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 2
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """选择登录方式"""
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=['manual', 'phone_login']
+        )
+
+    async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         errors: Dict[str, str] = {}
         if user_input is not None:
             try:
@@ -53,7 +60,7 @@ class HaierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors['base'] = 'auth_error'
 
         return self.async_show_form(
-            step_id="user",
+            step_id="manual",
             data_schema=vol.Schema(
                 {
                     vol.Required(CLIENT_ID): str,
@@ -61,6 +68,45 @@ class HaierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(APP_SOURCE, default=DEFAULT_APP_SOURCE): vol.In(APP_SOURCE_OPTIONS),
                     vol.Required('default_load_all_entity', default=True): bool,
                     vol.Required('ignore_device_offline', default=False): bool,
+                }
+            ),
+            errors=errors
+        )
+
+    async def async_step_phone_login(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """手机号+密码登录"""
+        errors: Dict[str, str] = {}
+        if user_input is not None:
+            try:
+                phone = user_input['phone']
+                # 手机号登录使用 App 来源
+                client = HaierClient(self.hass, phone, '', APP_SOURCE_APP)
+                token_info = await client.phone_login(phone, user_input['password'])
+                # 获取用户信息
+                client = HaierClient(self.hass, phone, token_info.token, APP_SOURCE_APP)
+                user_info = await client.get_user_info()
+
+                return self.async_create_entry(title="Haier - {}".format(user_info['mobile']), data={
+                    'account': {
+                        'client_id': phone,
+                        'token': token_info.token,
+                        'refresh_token': token_info.refresh_token,
+                        'expires_at': int(time.time()) + token_info.expires_in,
+                        'app_source': APP_SOURCE_APP,
+                        'default_load_all_entity': True,
+                        'ignore_device_offline': False
+                    }
+                })
+            except HaierClientException as e:
+                _LOGGER.warning(str(e))
+                errors['base'] = 'auth_error'
+
+        return self.async_show_form(
+            step_id="phone_login",
+            data_schema=vol.Schema(
+                {
+                    vol.Required('phone'): str,
+                    vol.Required('password'): str,
                 }
             ),
             errors=errors

@@ -5,14 +5,28 @@
         },
         "step": {
             "user": {
+                "menu_options": {
+                    "manual": "手动输入 refresh_token",
+                    "phone_login": "手机号登录"
+                }
+            },
+            "manual": {
                 "title": "账号设置",
-                "description": "配置海尔智家账户",
+                "description": "手动输入海尔 refresh_token 配置账户",
                 "data": {
                     "client_id": "Client Id",
                     "refresh_token": "Refresh Token",
                     "app_source": "Token来源",
                     "default_load_all_entity": "默认加载所有实体",
                     "ignore_device_offline": "忽略设备离线状态（离线时保留最后状态）"
+                }
+            },
+            "phone_login": {
+                "title": "手机号登录",
+                "description": "使用海尔智家账号手机号和密码登录",
+                "data": {
+                    "phone": "手机号",
+                    "password": "密码"
                 }
             }
         }
